@@ -1,6 +1,6 @@
 const prisma = require("../lib/prisma");
 
-export const syncUserService = async (firebaseUser) => {
+const syncUserService = async (firebaseUser) => {
   const existingUser = await prisma.user.findUnique({
     where: {
       id: firebaseUser.uid,
@@ -21,3 +21,5 @@ export const syncUserService = async (firebaseUser) => {
 
   return newUser;
 };
+
+module.exports = syncUserService;

@@ -1,6 +1,6 @@
 const syncUserService = require("../services/authService");
 
-export const syncUserController = async (req, res) => {
+const syncUserController = async (req, res) => {
   try {
     const user = await syncUserService(req.user);
 
@@ -10,3 +10,5 @@ export const syncUserController = async (req, res) => {
     console.log(error);
   }
 };
+
+module.exports = syncUserController;
