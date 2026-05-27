@@ -2,19 +2,20 @@ const prisma = require("../lib/prisma");
 
 const createNote = async (req, res) => {
   try {
-    const { title, description, tags } = req.body;
+    const { title, content, previewText, tags } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Title is required!" });
     }
-    if (!description) {
+    if (!content) {
       return res.status(400).json({ message: "Description is required!" });
     }
 
     const note = await prisma.note.create({
       data: {
         title,
-        description,
+        content,
+        previewText,
         tags,
         userId: req.user.uid,
       },
@@ -101,6 +102,7 @@ const deleteNoteById = async (req, res) => {
 
 const updateNoteById = async (req, res) => {
   try {
+    const { title, content, previewText, tags } = req.body;
     const { id } = req.params;
 
     const note = await prisma.note.findFirst({
@@ -114,22 +116,29 @@ const updateNoteById = async (req, res) => {
       return res.status(404).json({ message: "Note not found!" });
     }
 
-    await prisma.note.update({
+    const updatedNote = await prisma.note.update({
       where: {
         id,
       },
       data: {
         title,
-        description,
+        content,
+        previewText,
         tags,
       },
     });
 
-    return res.status(200).json({ sucess: true, note: updatedNote, });
+    return res.status(200).json({ sucess: true, note: updatedNote });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = { createNote, getAllNotes, getNoteById, deleteNoteById, updateNoteById };
+module.exports = {
+  createNote,
+  getAllNotes,
+  getNoteById,
+  deleteNoteById,
+  updateNoteById,
+};
