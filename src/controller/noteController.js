@@ -2,7 +2,7 @@ const prisma = require("../lib/prisma");
 
 const createNote = async (req, res) => {
   try {
-    const { title, content, previewText, tags } = req.body;
+    const { title, content, previewText, tags, searchText } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Title is required!" });
@@ -17,6 +17,7 @@ const createNote = async (req, res) => {
         content,
         previewText,
         tags,
+        searchText,
         userId: req.user.uid,
       },
     });
@@ -32,9 +33,39 @@ const createNote = async (req, res) => {
 
 const getAllNotes = async (req, res) => {
   try {
+    const { search } = req.query;
     const notes = await prisma.note.findMany({
       where: {
         userId: req.user.uid,
+
+        ...(search && {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              previewText: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              tags: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              searchText: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }),
       },
     });
 
@@ -102,7 +133,7 @@ const deleteNoteById = async (req, res) => {
 
 const updateNoteById = async (req, res) => {
   try {
-    const { title, content, previewText, tags } = req.body;
+    const { title, content, previewText, tags, searchText } = req.body;
     const { id } = req.params;
 
     const note = await prisma.note.findFirst({
@@ -125,6 +156,7 @@ const updateNoteById = async (req, res) => {
         content,
         previewText,
         tags,
+        searchText
       },
     });
 

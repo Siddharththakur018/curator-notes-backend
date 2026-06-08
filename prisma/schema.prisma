@@ -14,13 +14,15 @@ enum Role {
 }
 
 model User {
-  id        String   @id
-  name      String?
-  email     String   @unique
-  role      Role     @default(USER)
-  notes     Note[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id
+  name            String?
+  email           String   @unique
+  role            Role     @default(USER)
+  notes           Note[]
+  aiCreditis      Int      @default(1000)
+  lastCreditReset DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Note {
@@ -28,6 +30,7 @@ model Note {
   title       String
   content     Json
   previewText String?
+  searchText  String?
   tags        String?
   user        User     @relation(fields: [userId], references: [id])
   userId      String
