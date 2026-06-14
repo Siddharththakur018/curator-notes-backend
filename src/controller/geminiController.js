@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
 const { generateContent } = require("../services/gemini.service");
+const {calculateCreditFromTokens, estimateTokens} = require("../utils/credit.util")
 
 const testAI = async (req, res) => {
   try {
@@ -33,21 +34,43 @@ const aiAssist = async (req, res) => {
     let prompt = "";
 
     switch (action) {
-      case summarize:
+      case "summarize":
         prompt = `
-          Summarize this note in concise bullet points.
+Summarize this note.
 
-          ${text}
-        `;
+Rules:
+- Return plain text only
+- No markdown
+- No asterisks
+- No headings
+- Each point on a new line
+- Use bold to highlight important things 
+
+${text}
+`;
         break;
 
-      case improve:
-        promt = `Improve this writing while preserving meaning. ${text}`;
+      case "improve":
+        prompt = `Improve this writing while preserving meaning.
+        Rules:
+- Return plain text only
+- No markdown
+- No asterisks
+- No headings
+- Use bold to highlight important things 
+- Each point on a new line
+        ${text}`;
         break;
 
       case "extract":
         prompt = `
-          Extract key ideas and action items.
+          Rules:
+- Return plain text only
+- No markdown
+- No asterisks
+- No headings
+- Use numbers in pointers for each new line
+- Each point on a new line
 
           ${text}
         `;
@@ -59,10 +82,19 @@ const aiAssist = async (req, res) => {
         });
     }
 
-    const result = generateContent(prompt);
+    
+
+    const aiResponse = await generateContent(prompt, {
+      maxOutputTokens: 500
+    });
+
+    const totalTokens = aiResponse.usageMetadata?.totalTokenCount || 0;
+    const creditUsed = calculateCreditFromTokens(totalTokens)
     return res.status(200).json({
       success: true,
-      result,
+      result: aiResponse.text,
+      usageMetadata: aiResponse.usageMetadata,
+      creditUsed
     });
   } catch (error) {
     console.error(error);
