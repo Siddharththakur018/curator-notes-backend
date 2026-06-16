@@ -1,6 +1,9 @@
 const prisma = require("../lib/prisma");
 const { generateContent } = require("../services/gemini.service");
-const {calculateCreditFromTokens, estimateTokens} = require("../utils/credit.util")
+const {
+  calculateCreditFromTokens,
+  estimateTokens,
+} = require("../utils/credit.util");
 
 const testAI = async (req, res) => {
   try {
@@ -17,7 +20,7 @@ const aiAssist = async (req, res) => {
   try {
     const { text, action } = req.body;
 
-    if (!text) {
+    if (!text || typeof text !== String || !text.trim()) {
       return res.status(400).json("Text is required!");
     }
 
@@ -31,70 +34,136 @@ const aiAssist = async (req, res) => {
       return res.status(404).json("User doesn't exist");
     }
 
+    // check whether user have credits or not
+    if (user.aiCredits <= 0) {
+      return res
+        .status(402)
+        .json({ success: false, message: "Insufficient AI credits" });
+    }
+
     let prompt = "";
 
     switch (action) {
       case "summarize":
         prompt = `
-Summarize this note.
+You are an AI writing assistant inside a notes app.
 
-Rules:
-- Return plain text only
-- No markdown
-- No asterisks
-- No headings
-- Each point on a new line
-- Use bold to highlight important things 
+Task:
+Summarize the user's note into clear, useful points.
 
+Output rules:
+- Return only the final answer
+- Use plain text only
+- Do not use markdown
+- Do not use headings
+- Do not use asterisks
+- Do not add extra commentary
+- Write each point on a new line
+- Keep the summary concise
+- Preserve the original meaning
+- Do not invent information
+
+User note:
 ${text}
 `;
         break;
 
       case "improve":
-        prompt = `Improve this writing while preserving meaning.
-        Rules:
-- Return plain text only
-- No markdown
-- No asterisks
-- No headings
-- Use bold to highlight important things 
-- Each point on a new line
-        ${text}`;
+        prompt = `
+You are an AI writing assistant inside a notes app.
+
+Task:
+Improve the user's writing while preserving the original meaning.
+
+Output rules:
+- Return only the improved version
+- Use plain text only
+- Do not use markdown
+- Do not use headings
+- Do not use asterisks
+- Do not add extra commentary
+- Keep the same language as the user's input
+- Improve grammar, clarity, flow, and readability
+- Do not change the core meaning
+- Do not invent new information
+
+User text:
+${text}
+`;
         break;
 
       case "extract":
         prompt = `
-          Rules:
-- Return plain text only
-- No markdown
-- No asterisks
-- No headings
-- Use numbers in pointers for each new line
-- Each point on a new line
+You are an AI writing assistant inside a notes app.
 
-          ${text}
-        `;
+Task:
+Extract the most important information from the user's note.
+
+Output rules:
+- Return only the extracted points
+- Use plain text only
+- Do not use markdown
+- Do not use headings
+- Do not use asterisks
+- Use numbered points
+- Put each point on a new line
+- Focus on key facts, tasks, decisions, dates, names, and important details
+- Do not invent information
+- If there is no useful information to extract, return: No key information found.
+
+User note:
+${text}
+`;
         break;
 
       default:
         return res.status(400).json({
+          success: false,
           message: "Invalid action",
         });
     }
 
-    
+    // check edge case if credits less than token which are gonna be used
+    const maxOutputTokens = 500;
+    const estimateInputTokens = estimateTokens(prompt);
+    const estimatedTotalTokens = estimateInputTokens + maxOutputTokens;
+    const estimateCredits = calculateCreditFromTokens(estimatedTotalTokens);
+
+    if (user.aiCredits < estimateCredits) {
+      return res.status(402).json({
+        success: false,
+        message: "Insufficient AI credits",
+        requiredCredits: estimateCredits,
+        availableCredits: user.aiCredits,
+      });
+    }
 
     const aiResponse = await generateContent(prompt, {
-      maxOutputTokens: 500
+      maxOutputTokens,
     });
 
     const totalTokens = aiResponse.usageMetadata?.totalTokenCount || 0;
-    const creditUsed = calculateCreditFromTokens(totalTokens)
+    const creditUsed = calculateCreditFromTokens(totalTokens);
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: req.user.uid,
+      },
+      data: {
+        aiCredits: {
+          decrement: creditUsed,
+        },
+      },
+      select: {
+        aiCredits: true,
+      },
+    });
     return res.status(200).json({
       success: true,
       result: aiResponse.text,
       usageMetadata: aiResponse.usageMetadata,
-      creditUsed
+      creditUsed,
+      remainingCredits: updatedUser.aiCredits,
     });
   } catch (error) {
     console.error(error);
