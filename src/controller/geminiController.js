@@ -5,6 +5,7 @@ const {
   estimateTokens,
 } = require("../utils/credit.util");
 
+// for testing purpose to check whether api call is happening or not from gemini
 const testAI = async (req, res) => {
   try {
     const result = await generateContent("Explain React in 2 lines");
@@ -18,12 +19,15 @@ const testAI = async (req, res) => {
 
 const aiAssist = async (req, res) => {
   try {
+    // extract text and action means what the user has demanded like summarize, improve etc
     const { text, action } = req.body;
 
-    if (!text || typeof text !== String || !text.trim()) {
+    // validation to check whether the text exist or not
+    if (!text || typeof text !== "string" || !text.trim()) {
       return res.status(400).json("Text is required!");
     }
 
+    // finding user if the user exits or not
     const user = await prisma.user.findUnique({
       where: {
         id: req.user.uid,
@@ -34,13 +38,7 @@ const aiAssist = async (req, res) => {
       return res.status(404).json("User doesn't exist");
     }
 
-    // check whether user have credits or not
-    if (user.aiCredits <= 0) {
-      return res
-        .status(402)
-        .json({ success: false, message: "Insufficient AI credits" });
-    }
-
+    // the prompt means the action gemini api needs to do
     let prompt = "";
 
     switch (action) {
@@ -129,7 +127,23 @@ ${text}
     const estimatedTotalTokens = estimateInputTokens + maxOutputTokens;
     const estimateCredits = calculateCreditFromTokens(estimatedTotalTokens);
 
-    if (user.aiCredits < estimateCredits) {
+    // check whether user have credits or not
+    const creditReservation = await prisma.user.updateMany({
+      where: {
+        id: req.user.uid,
+        aiCredits: {
+          gte: estimateCredits,
+        },
+      },
+      data: {
+        aiCredits: {
+          decrement: estimateCredits,
+        },
+      },
+    });
+
+    // credit count is 0 then insufficient balance as no api calls can be done
+    if (creditReservation.count === 0) {
       return res.status(402).json({
         success: false,
         message: "Insufficient AI credits",
@@ -138,12 +152,20 @@ ${text}
       });
     }
 
+    // maximum tokens we are finding when any prompt is used by gemini to calculate credit used by user
     const aiResponse = await generateContent(prompt, {
       maxOutputTokens,
     });
 
-    const totalTokens = aiResponse.usageMetadata?.totalTokenCount || 0;
+    // finding total tokens used by gemini
+    const totalTokens =
+      aiResponse.usageMetadata?.totalTokenCount || estimatedTotalTokens;
+
+    // calculating total credit used by gemini from the remaining credits
     const creditUsed = calculateCreditFromTokens(totalTokens);
+
+    // refund unused reserved credits
+    const refundCredits = Math.max(estimateCredits - creditUsed, 0);
 
     const updatedUser = await prisma.user.update({
       where: {
@@ -151,7 +173,7 @@ ${text}
       },
       data: {
         aiCredits: {
-          decrement: creditUsed,
+          increment: refundCredits,
         },
       },
       select: {
@@ -162,8 +184,12 @@ ${text}
       success: true,
       result: aiResponse.text,
       usageMetadata: aiResponse.usageMetadata,
-      creditUsed,
-      remainingCredits: updatedUser.aiCredits,
+      credits: {
+        used: creditUsed,
+        reserved: estimateCredits,
+        refunded: refundCredits,
+        remaining: updatedUser.aiCredits,
+      },
     });
   } catch (error) {
     console.error(error);
