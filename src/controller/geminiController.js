@@ -47,7 +47,7 @@ const aiAssist = async (req, res) => {
 You are an AI writing assistant inside a notes app.
 
 Task:
-Summarize the user's note into clear, useful points.
+Summarize the user's note into a clear and useful summary.
 
 Output rules:
 - Return only the final answer
@@ -56,8 +56,10 @@ Output rules:
 - Do not use headings
 - Do not use asterisks
 - Do not add extra commentary
+- Return 3 to 6 useful points when enough information is available
+- If the note is very short, return the best possible summary without inventing details
 - Write each point on a new line
-- Keep the summary concise
+- Keep each point clear and meaningful
 - Preserve the original meaning
 - Do not invent information
 
@@ -81,9 +83,10 @@ Output rules:
 - Do not use asterisks
 - Do not add extra commentary
 - Keep the same language as the user's input
-- Improve grammar, clarity, flow, and readability
-- Do not change the core meaning
+- Improve grammar, clarity, flow, tone, and readability
+- Keep the original intent and information
 - Do not invent new information
+- Keep paragraph breaks where helpful
 
 User text:
 ${text}
@@ -98,14 +101,15 @@ Task:
 Extract the most important information from the user's note.
 
 Output rules:
-- Return only the extracted points
+- Return only the extracted information
 - Use plain text only
 - Do not use markdown
 - Do not use headings
 - Do not use asterisks
 - Use numbered points
-- Put each point on a new line
-- Focus on key facts, tasks, decisions, dates, names, and important details
+- Return up to 8 important points
+- Include key facts, tasks, decisions, dates, names, deadlines, and important details
+- Do not repeat the same idea
 - Do not invent information
 - If there is no useful information to extract, return: No key information found.
 
@@ -122,7 +126,7 @@ ${text}
     }
 
     // check edge case if credits less than token which are gonna be used
-    const maxOutputTokens = 500;
+    const maxOutputTokens = 4000;
     const estimateInputTokens = estimateTokens(prompt);
     const estimatedTotalTokens = estimateInputTokens + maxOutputTokens;
     const estimateCredits = calculateCreditFromTokens(estimatedTotalTokens);
