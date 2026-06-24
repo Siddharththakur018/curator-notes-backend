@@ -160,7 +160,7 @@ const updateNoteById = async (req, res) => {
       },
     });
 
-    return res.status(200).json({ sucess: true, note: updatedNote });
+    return res.status(200).json({ success: true, note: updatedNote });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: error.message });

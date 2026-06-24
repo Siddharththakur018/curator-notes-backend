@@ -3,6 +3,7 @@ const { generateContent } = require("../services/gemini.service");
 const {
   calculateCreditFromTokens,
   estimateTokens,
+  checkAndResetCredits,
 } = require("../utils/credit.util");
 
 // for testing purpose to check whether api call is happening or not from gemini
@@ -28,12 +29,7 @@ const aiAssist = async (req, res) => {
     }
 
     // finding user if the user exits or not
-    const user = await prisma.user.findUnique({
-      where: {
-        id: req.user.uid,
-      },
-    });
-
+    const user = await checkAndResetCredits(req.user.uid);
     if (!user) {
       return res.status(404).json("User doesn't exist");
     }

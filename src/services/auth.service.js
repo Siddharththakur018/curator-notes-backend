@@ -1,4 +1,5 @@
 const prisma = require("../lib/prisma");
+const { checkAndResetCredits } = require("../utils/credit.util");
 
 const syncUserService = async (firebaseUser) => {
   const existingUser = await prisma.user.findUnique({
@@ -8,7 +9,8 @@ const syncUserService = async (firebaseUser) => {
   });
 
   if (existingUser) {
-    return existingUser;
+    const updatedUser = await checkAndResetCredits(firebaseUser.uid);
+    return updatedUser;
   }
 
   const newUser = await prisma.user.create({
