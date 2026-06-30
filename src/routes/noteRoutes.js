@@ -7,16 +7,16 @@ const {
   deleteNoteById,
   updateNoteById,
 } = require("../controller/noteController");
-const verifyFirebaseToken = require("../middleware/authMiddleware");
+const { verifyFirebaseToken, dbUserFecther } = require("../middleware/authMiddleware");
 
-router.post("/", verifyFirebaseToken, createNote);
+router.post("/", verifyFirebaseToken,dbUserFecther, createNote);
 
-router.get("/", verifyFirebaseToken, getAllNotes);
+router.get("/", verifyFirebaseToken,dbUserFecther, getAllNotes);
 
-router.get("/:id", verifyFirebaseToken, getNoteById);
+router.get("/:id", verifyFirebaseToken,dbUserFecther, getNoteById);
 
-router.put("/:id", verifyFirebaseToken, updateNoteById);
+router.put("/:id", verifyFirebaseToken,dbUserFecther, updateNoteById);
 
-router.delete("/:id", verifyFirebaseToken, deleteNoteById);
+router.delete("/:id", verifyFirebaseToken,dbUserFecther, deleteNoteById);
 
 module.exports = router;

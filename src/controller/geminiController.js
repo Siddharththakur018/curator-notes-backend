@@ -1,4 +1,5 @@
 const prisma = require("../lib/prisma");
+const {redis} = require("../lib/redis");
 const { generateContent } = require("../services/gemini.service");
 const {
   calculateCreditFromTokens,
@@ -29,7 +30,7 @@ const aiAssist = async (req, res) => {
     }
 
     // finding user if the user exits or not
-    const user = await checkAndResetCredits(req.user.uid);
+    const user = await checkAndResetCredits(req.user.id);
     if (!user) {
       return res.status(404).json("User doesn't exist");
     }
@@ -130,7 +131,7 @@ ${text}
     // check whether user have credits or not
     const creditReservation = await prisma.user.updateMany({
       where: {
-        id: req.user.uid,
+        id: req.user.id,
         aiCredits: {
           gte: estimateCredits,
         },
@@ -169,7 +170,7 @@ ${text}
 
     const updatedUser = await prisma.user.update({
       where: {
-        id: req.user.uid,
+        id: req.user.id,
       },
       data: {
         aiCredits: {
@@ -197,4 +198,10 @@ ${text}
   }
 };
 
-module.exports = { testAI, aiAssist };
+const testRedis = async (req, res) => {
+  await redis.set("test-key", "hello");
+  const value = await redis.get("test-key");
+  res.json({ value });
+};
+
+module.exports = { testAI, aiAssist, testRedis };

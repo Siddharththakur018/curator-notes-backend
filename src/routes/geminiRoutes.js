@@ -1,9 +1,24 @@
-const {testAI, aiAssist} = require("../controller/geminiController")
+const {
+  testAI,
+  aiAssist,
+  testRedis,
+} = require("../controller/geminiController");
 const express = require("express");
-const verifyFirebaseToken = require("../middleware/authMiddleware");
-const router = express.Router()
+const {
+  verifyFirebaseToken,
+  dbUserFecther,
+} = require("../middleware/authMiddleware");
+const { aiRateLimitMiddleware } = require("../middleware/aiRateLimiter");
+const router = express.Router();
 
 router.get("/test", testAI);
-router.post("/assist",verifyFirebaseToken, aiAssist)
+router.post(
+  "/assist",
+  verifyFirebaseToken,
+  dbUserFecther,
+  aiRateLimitMiddleware,
+  aiAssist,
+);
+router.get("/testRedis", testRedis);
 
-module.exports = router
+module.exports = router;

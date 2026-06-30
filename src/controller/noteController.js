@@ -18,7 +18,7 @@ const createNote = async (req, res) => {
         previewText,
         tags,
         searchText,
-        userId: req.user.uid,
+        userId: req.user.id,
       },
     });
 
@@ -36,7 +36,7 @@ const getAllNotes = async (req, res) => {
     const { search } = req.query;
     const notes = await prisma.note.findMany({
       where: {
-        userId: req.user.uid,
+        userId: req.user.id,
 
         ...(search && {
           OR: [
@@ -85,7 +85,7 @@ const getNoteById = async (req, res) => {
     const note = await prisma.note.findFirst({
       where: {
         id,
-        userId: req.user.uid,
+        userId: req.user.id,
       },
     });
 
@@ -107,7 +107,7 @@ const deleteNoteById = async (req, res) => {
     const note = await prisma.note.findFirst({
       where: {
         id,
-        userId: req.user.uid,
+        userId: req.user.id,
       },
     });
 
@@ -139,7 +139,7 @@ const updateNoteById = async (req, res) => {
     const note = await prisma.note.findFirst({
       where: {
         id,
-        userId: req.user.uid,
+        userId: req.user.id,
       },
     });
 

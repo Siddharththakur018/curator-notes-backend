@@ -37,6 +37,8 @@ const checkAndResetCredits = async (userId) => {
       },
     });
   }
+
+  return user;
 };
 
 module.exports = {
