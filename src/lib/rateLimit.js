@@ -13,4 +13,9 @@ const premiumLimiter = new Ratelimit({
   prefix: "ratelimit:premium",
 });
 
-module.exports = {userLimiter, premiumLimiter}
+const loginLimiter = new Ratelimit({
+  redis, limiter: Ratelimit.slidingWindow(10, "60 s"),
+  prefix: "ratelimit:login"
+})
+
+module.exports = {userLimiter, premiumLimiter, loginLimiter}

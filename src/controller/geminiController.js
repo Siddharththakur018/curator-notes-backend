@@ -1,23 +1,10 @@
 const prisma = require("../lib/prisma");
-const {redis} = require("../lib/redis");
 const { generateContent } = require("../services/gemini.service");
 const {
   calculateCreditFromTokens,
   estimateTokens,
   checkAndResetCredits,
 } = require("../utils/credit.util");
-
-// for testing purpose to check whether api call is happening or not from gemini
-const testAI = async (req, res) => {
-  try {
-    const result = await generateContent("Explain React in 2 lines");
-
-    return res.status(200).json({ success: true, result });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
-  }
-};
 
 const aiAssist = async (req, res) => {
   try {
@@ -154,9 +141,19 @@ ${text}
     }
 
     // maximum tokens we are finding when any prompt is used by gemini to calculate credit used by user
-    const aiResponse = await generateContent(prompt, {
-      maxOutputTokens,
-    });
+    let aiResponse;
+    try {
+      aiResponse = await generateContent(prompt, {
+        maxOutputTokens,
+      });
+    } catch (aiError) {
+      // Gemini call failed after credits were reserved - refund the full reservation
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { aiCredits: { increment: estimateCredits } },
+      });
+      throw aiError;
+    }
 
     // finding total tokens used by gemini
     const totalTokens =
@@ -198,10 +195,4 @@ ${text}
   }
 };
 
-const testRedis = async (req, res) => {
-  await redis.set("test-key", "hello");
-  const value = await redis.get("test-key");
-  res.json({ value });
-};
-
-module.exports = { testAI, aiAssist, testRedis };
+module.exports = { aiAssist };

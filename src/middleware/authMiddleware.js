@@ -12,18 +12,14 @@ const verifyFirebaseToken = async (req, res, next) => {
     }
 
     const token = match[1].trim();
-      console.log("TOKEN LENGTH:", token.length);
-    console.log("JWT PARTS:", token.split(".").length);
-    console.log("TOKEN START:", token.slice(0, 30));
-    console.log("TOKEN END:", token.slice(-30));
 
     const decodedToken = await admin.auth().verifyIdToken(token);
 
     req.user = decodedToken;
     next();
   } catch (error) {
-    res.status(500).json({ message: error.message });
     console.error(error);
+    res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 
